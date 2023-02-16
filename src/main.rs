@@ -1,5 +1,6 @@
 use std::io::stdin;
 use std::io::stdout;
+use std::io::Write;
 use std::process::exit;
 
 #[derive(Debug)]
@@ -10,7 +11,7 @@ enum CLIErrors {
 fn main() {
     let mut input = String::new();
     let mut type_option = OptionPrompt {
-        query: "What type is the label".to_string(),
+        query: "What type is the label\n".to_string(),
         options: Vec::new(),
     };
 
@@ -52,13 +53,17 @@ struct OptionPrompt {
 }
 
 fn prompt(prompt: &OptionPrompt) -> String {
+    let stdo = stdout().lock();
+    let mut write_handle = std::io::BufWriter::new(stdo);
+
     loop {
         let mut i = 0;
         for option in &prompt.options {
-            println!("({}) {:?}", i, option);
+            write!(write_handle, "({}) {:?}\n", i, option);
             i += 1;
         }
-        println!("{}", prompt.query);
+        write!(write_handle, "{}", prompt.query);
+        write_handle.flush().unwrap();
 
         let mut response = String::new();
 
@@ -69,7 +74,7 @@ fn prompt(prompt: &OptionPrompt) -> String {
         let index = str::parse::<usize>(&response.trim());
 
         if index.is_err() {
-            println!("could not parse that choice, try again");
+            write!(write_handle, "could not parse input, try again\n");
             continue;
         }
 
@@ -78,7 +83,11 @@ fn prompt(prompt: &OptionPrompt) -> String {
         match result_option.is_some() {
             true => return result_option.unwrap().to_string(),
             false => {
-                println!("something went wrong or that choice is invalid, try again");
+                write!(
+                    write_handle,
+                    "something went wrong or that choice is invalid, try again\n"
+                );
+                write_handle.flush();
             }
         }
     }
